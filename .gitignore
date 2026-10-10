@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Entorno virtual
+.venv/
+venv/
+
+# Cachés de pruebas
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Resultados generados
+resultados/*
+!resultados/.gitkeep
+
+# Editor
+.vscode/
+.idea/
+
+# Sistema
+.DS_Store
+Thumbs.db
