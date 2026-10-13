@@ -1,8 +1,4 @@
-"""Pruebas de integración: dominio + los tres módulos de simulación.
-
-Copiar las funciones a tests/test_simulacion.py o guardar como
-`tests/test_simulacion_yandry.py` sin reemplazar las pruebas existentes.
-Ejecutar: python -m pytest tests/test_simulacion_yandry.py -v
+"""Pruebas de integración  
 """
 
 from statistics import mean
