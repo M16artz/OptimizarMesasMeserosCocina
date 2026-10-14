@@ -1,24 +1,28 @@
-class Cliente:
-    def __init__(self, id_cliente: int, tamaño_grupo: int, tiempo_llegada: float):
-        self.id_cliente = id_cliente
-        self.tamaño_grupo = tamaño_grupo
-        self.tiempo_llegada = tiempo_llegada
-        self.estado = "LLEGADA"
-        self.tiempo_inicio_espera_mesa = 0.0
-        self.tiempo_inicio_atencion = 0.0
-        self.tiempo_salida = 0.0
+from dataclasses import dataclass
+from .parametros import ConfiguracionRestaurante
 
-class RecursoOperativo:
-    def __init__(self, tipo: str, capacidad_total: int):
-        self.tipo = tipo
-        self.capacidad_total = capacidad_total
-        self.disponibles = capacidad_total
+@dataclass(frozen=True)
+class RegistroGrupo:
+    grupo_id: int
+    llegada_min: float
+    mesa_inicio_min: float
+    pedido_inicio_min: float
+    pedido_fin_min: float
+    cocina_inicio_min: float
+    cocina_fin_min: float
+    consumo_fin_min: float
+    pago_inicio_min: float
+    salida_min: float
 
-    def ocupar(self, cantidad: int = 1) -> bool:
-        if self.disponibles >= cantidad:
-            self.disponibles -= cantidad
-            return True
-        return False
-
-    def liberar(self, cantidad: int = 1):
-        self.disponibles = min(self.capacidad_total, self.disponibles + cantidad)
+@dataclass(frozen=True)
+class ResultadoSimulacion:
+    configuracion: ConfiguracionRestaurante
+    semilla: int
+    registros: tuple[RegistroGrupo, ...]
+    grupos_llegados_horizonte: int
+    grupos_salidos_horizonte: int
+    grupos_pendientes_al_cierre: int
+    ocupacion_mesas_minutos_horizonte: float
+    ocupacion_meseros_minutos_horizonte: float
+    ocupacion_cocineros_minutos_horizonte: float
+    tiempo_ultima_salida_min: float
