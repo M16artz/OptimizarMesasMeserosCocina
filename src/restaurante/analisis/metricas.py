@@ -162,6 +162,31 @@ def _utilizacion(
     return _validar_utilizacion(ocupacion / (cantidad * horizonte), recurso)
 
 
+def _longitud_media_cola(resultado: Any, recurso: str, horizonte_observado: float) -> float:
+    """Longitud media de cola (numero medio de grupos en espera).
+
+    Se obtiene integrando la longitud de la cola en el tiempo: el motor acumula
+    ``area_colas_minutos``; dividirla por el horizonte observado (que cubre
+    llegadas y fase de vaciado) da el numero medio de grupos en espera del
+    recurso, segun la Ley de Little. Si el resultado no incluye esa area, se
+    reporta ``0.0`` para no romper el contrato de metricas.
+    """
+
+    singular = {"mesas": "mesa", "meseros": "mesero", "cocineros": "cocinero"}[recurso]
+    areas = _obtener(resultado, "area_colas_minutos")
+    if not isinstance(areas, Mapping) or singular not in areas:
+        return 0.0
+    try:
+        area = float(areas[singular])
+    except (TypeError, ValueError) as exc:
+        raise TypeError(f"el area de cola de {recurso} debe ser numerica") from exc
+    if not isfinite(area):
+        raise ValueError(f"el area de cola de {recurso} debe ser finita")
+    if area < 0:
+        raise ValueError(f"el area de cola de {recurso} no puede ser negativa")
+    return area / horizonte_observado
+
+
 def calcular_metricas(
     resultado: Any, configuracion: Any | None = None
 ) -> dict[str, float | int]:
@@ -238,6 +263,17 @@ def calcular_metricas(
     if not isfinite(ultima_salida) or ultima_salida < 0:
         raise ValueError("tiempo_ultima_salida_min debe ser finito y no negativo")
 
+    horizonte_observado_valor = _obtener(resultado, "horizonte_observado_minutos")
+    if horizonte_observado_valor is None:
+        horizonte_observado = max(horizonte, ultima_salida)
+    else:
+        try:
+            horizonte_observado = float(horizonte_observado_valor)
+        except (TypeError, ValueError) as exc:
+            raise TypeError("el horizonte observado debe ser numerico") from exc
+        if not isfinite(horizonte_observado) or horizonte_observado <= 0:
+            raise ValueError("el horizonte observado debe ser finito y positivo")
+
     return {
         "grupos_llegados_horizonte": llegados,
         "grupos_salidos_horizonte": salidos_horizonte,
@@ -260,6 +296,15 @@ def calcular_metricas(
         ),
         "utilizacion_cocineros": _utilizacion(
             resultado, "cocineros", cantidades["cocineros"], horizonte
+        ),
+        "longitud_media_cola_mesas": _longitud_media_cola(
+            resultado, "mesas", horizonte_observado
+        ),
+        "longitud_media_cola_meseros": _longitud_media_cola(
+            resultado, "meseros", horizonte_observado
+        ),
+        "longitud_media_cola_cocineros": _longitud_media_cola(
+            resultado, "cocineros", horizonte_observado
         ),
         "tasa_salida_horizonte_grupos_hora": salidos_horizonte * 60.0 / horizonte,
         "tiempo_ultima_salida_min": ultima_salida,
