@@ -223,3 +223,65 @@ La optimización considera exclusivamente los conteos enteros positivos de mesas
 - [ ] ¿Quién revisará cada *pull request* y cuál será la versión de Python adoptada?
 
 **Criterio para iniciar el trabajo independiente:** aprobar al menos las reglas del ciclo de atención, los tipos compartidos `ConfiguracionRestaurante` / `RegistroGrupo` / `ResultadoSimulacion` y las definiciones de tiempo/unidad. Los detalles experimentales restantes pueden cerrarse antes de implementar `optimizador.py`.
+
+## 14. Actualización de contratos e interfaz web (propuesta para revisión)
+
+**Fecha:** 2026-10-14 · **Estado:** ACTUALIZACIÓN PROPUESTA — requiere revisión del equipo.
+
+Al integrar la rama de simulación/análisis (`MiguelRama`), la implementación del
+backend difiere de la propuesta inicial de este documento. Para evitar
+desalineaciones, se registra aquí el contrato **realmente implementado**, que es
+el que debe considerarse como interfaz vigente.
+
+### 14.1 Contrato real del backend
+
+- `dominio/parametros.py` → `ParametrosSistema(lambda_llegada, mu_servicio, mesas, meseros, cocineros)`
+  - `lambda_llegada` en **grupos/hora**.
+  - `mu_servicio` en **pedidos atendidos por mesero/hora** (media de pedido `= 60 / mu_servicio` minutos).
+- `simulacion/procesos.py` → `ConfiguracionSimulacion` (frozen):
+  `duracion_llegadas_minutos`, `preparacion_media_minutos`, `consumo_media_minutos`,
+  `pago_medio_minutos`, `tamano_grupo`, `distribucion` (`"exponencial"` o `"fija"`).
+- `simulacion/motor.py` → `MotorSimulacion(parametros, configuracion=None, semilla=42).ejecutar()`
+  devuelve `ResultadoSimulacion` con: `registros` (lista de dicts), `utilizacion`
+  (`{"mesa", "mesero", "cocinero"}`), `area_ocupada_minutos`, `area_colas_minutos`,
+  `horizonte_observado_minutos` y `eventos`.
+- Las marcas de tiempo de cada registro son `llegada`, `mesa_asignada`,
+  `inicio_pedido`, `fin_pedido`, `inicio_cocina`, `fin_cocina`, `fin_consumo`,
+  `inicio_pago` y `salida` (equivalen a los nombres `*_min` del contrato inicial).
+- `analisis/` → `calcular_metricas(resultado, configuracion=None)`,
+  `ejecutar_experimentos(configuraciones, replicas, semilla_base)`,
+  `resumir_experimentos(tabla, ...)`, `seleccionar_configuracion(tabla, restricciones, pesos)`,
+  `frontera_pareto(tabla, objetivos)`, y `teoria_colas` (M/M/s).
+
+### 14.2 Interfaz web (Streamlit)
+
+- Se agrega el paquete `src/restaurante/interfaz/` como **capa de presentación**:
+  `servicios.py` (lógica de aplicación, sin Streamlit), `estado.py`, `cache.py`,
+  `rutas.py` y `vistas/`.
+- El mismo `servicios.py` alimenta la consola (`main.py`) y la web, evitando
+  duplicar lógica.
+- `main.py` conserva su rol de punto de entrada ejecutable (prueba de aceptación
+  #10) y ahora usa el backend real.
+- Streamlit se añade como dependencia de la interfaz web; el núcleo (dominio,
+  simulación, análisis) no depende de él.
+
+### 14.3 Longitud media de cola
+
+- El motor ya acumula `area_colas_minutos` (integral de la longitud de cada cola
+  en el tiempo) y `horizonte_observado_minutos`.
+- `calcular_metricas` ahora expone la **longitud media de cola** por recurso:
+  `longitud_media_cola_mesas`, `longitud_media_cola_meseros` y
+  `longitud_media_cola_cocineros`, con
+  `L_media = area_colas_minutos[recurso] / horizonte_observado_minutos`.
+- Con ello se cierra el indicador de **longitud de colas** del objetivo
+  específico 2 y el requisito de §8 (se registra/integra la evolución de la cola).
+  Admiten usarse como restricción del optimizador (p. ej.
+  `longitud_media_cola_mesas <= umbral`).
+
+### 14.4 Pendientes de aprobación del equipo
+
+- [ ] Confirmar el contrato real de §14.1 como vigente y reemplazar los tipos
+  `ConfiguracionRestaurante` / `RegistroGrupo` / `ResultadoSimulacion` propuestos
+  inicialmente por los aquí descritos.
+- [ ] Aprobar `interfaz/` (Streamlit) como capa de presentación opcional.
+- [ ] Acordar el responsable de la interfaz web y de las pruebas de humo (`AppTest`).
