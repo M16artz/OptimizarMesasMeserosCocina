@@ -1,0 +1,15 @@
+# Configuración base del simulador
+# Unidades: tiempos en minutos, tasa en grupos/hora
+
+mesas: 4
+meseros: 2
+cocineros: 1
+
+tasa_llegadas_grupos_hora: 30.0
+
+tiempo_pedido_media_min: 2.0
+tiempo_preparacion_media_min: 5.0
+tiempo_consumo_media_min: 15.0
+tiempo_pago_media_min: 2.0
+
+duracion_llegadas_min: 120.0
